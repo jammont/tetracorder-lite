@@ -152,6 +152,66 @@ tetrapy run config.yml \
 
 You can also load and run just one subsection with `-s/--section`.
 
+### Deleted channels
+
+`sensor.deleted_channels` lists the channels Tetracorder removes before fitting:
+atmospheric water bands and detector edges. It can be written in two ways.
+
+**Wavelength ranges (the default).** The `sensor` stage turns these into channel
+numbers using the scene's own wavelength grid from `${data.rfl}.hdr`, so the same
+config works on any sensor or calibration:
+
+```yaml
+sensor:
+  deleted_channels:
+    units: um                   # um (default) | nm
+    wavelengths:                # inclusive [min, max], matched against band centres
+      - [0.38, 0.405]
+      - [1.327, 1.477]          # 1.4 um water band
+      - [1.770, 1.968]          # 1.9 um water band
+    channels: "218 219t221 226" # optional 1-based channel numbers, combined with the ranges
+```
+
+A channel is deleted when its **centre** wavelength falls inside a range, endpoints
+included. Leave some margin around band centres: on EMIT, a lower edge of `1.774`
+misses channel 188 (centre 1.7740 µm), but `1.770` catches it.
+
+**Channel numbers.** A plain string uses Tetracorder's own syntax (`NtM` ranges,
+single numbers, optional trailing `c`) and is used as written. It is only correct on
+the grid it was written for:
+
+```yaml
+sensor:
+  deleted_channels: "1t4 75t79 99t106 128t148 188t214 218 219t221 226 280t285c"
+```
+
+Both forms are checked so that every channel falls within `[1, nchans]`. Ranges that
+match no channels log a warning. Values that don't fit `units` raise an error, as do
+wavelength ranges against a header with no wavelength grid. The resolved list is
+logged and recorded as `sensor.deleted_channels_resolved` in the exported config
+(`log.config`).
+
+For a **non-EMIT sensor**, drop the EMIT-specific `channels` and give only the
+physical bands. These ranges are illustrative, so tune them for your instrument:
+
+```yaml
+sensor:
+  name: aviris3
+  deleted_channels:
+    units: nm
+    wavelengths:
+      - [1340, 1460]
+      - [1790, 1960]
+      - [2450, 2520]
+```
+
+You can also override just the ranges on the CLI:
+
+```sh
+tetrapy run config.yml \
+  --sensor.deleted_channels.wavelengths '[[1.327, 1.477], [1.770, 1.968]]'
+```
+
 ## Commands
 
 The container entrypoint is `tetrapy`. `run` is the usual entry point; the individual
@@ -212,6 +272,12 @@ The Python CLI lives in `tetrapy/`. Managed with [pixi](https://pixi.sh):
 ```sh
 pixi install
 pixi run tetrapy --help
+```
+
+Run the tests with [uv](https://docs.astral.sh/uv/):
+
+```sh
+uv run --group dev pytest
 ```
 
 ## Project structure
