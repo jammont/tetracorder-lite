@@ -31,3 +31,17 @@ tetrapy = "tetrapy.__main__:cli"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    # Synthetic rasters are intentionally ungeoreferenced
+    "ignore::rasterio.errors.NotGeoreferencedWarning",
+    "ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:dateutil",
+    "ignore:Setting the shape on a NumPy array:DeprecationWarning",
+]
